@@ -443,15 +443,41 @@ service_started() {
 
 service_stopped() {
 	cleanup
+	kill_core
 }
 
 reload_service() {
 	cleanup
+	kill_core
 	start
 }
 
 service_triggers() {
 	procd_add_reload_trigger "nikki"
+}
+
+kill_core() {
+	# The core is started through a `/bin/sh -c` wrapper (see start_service),
+	# so procd tracks the wrapper rather than mihomo itself. When an instance
+	# stops, the wrapper is killed but mihomo can survive as an orphan
+	# (PPID 1) still holding its ports; the next start then fails with
+	# "address already in use" and leftover cores pile up on every reload
+	# (upstream issue #819). Terminate any leftover core here: SIGTERM
+	# first, wait until it is really gone, SIGKILL as a last resort.
+	if ! pidof mihomo > /dev/null 2>&1; then
+		return
+	fi
+	log "Core" "Kill leftover core process."
+	killall mihomo > /dev/null 2>&1
+	local waited
+	waited=0
+	while pidof mihomo > /dev/null 2>&1 && [ "$waited" -lt 5 ]; do
+		sleep 1
+		waited=$((waited + 1))
+	done
+	if pidof mihomo > /dev/null 2>&1; then
+		killall -9 mihomo > /dev/null 2>&1
+	fi
 }
 
 cleanup() {
