@@ -1,0 +1,58 @@
+name: release-packages-fork
+
+# Release build for this fork: pushing a v* tag builds the fork's packages
+# for the devices in use (aarch64_generic, aarch64_cortex-a53) on the
+# openwrt-24.10 SDK (so artifacts stay .ipk for opkg-based firmware) and
+# publishes them as a GitHub Release. Upstream's release-packages.yml is
+# disabled in this fork's Actions settings (full matrix, signing and the
+# upstream feed deploy are not applicable here).
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - v*
+
+jobs:
+  release:
+    name: ${{ matrix.arch }}-${{ matrix.branch }} release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - aarch64_generic
+          - aarch64_cortex-a53
+        branch:
+          - openwrt-24.10
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: build
+        uses: openwrt/gh-action-sdk@main
+        env:
+          ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
+          FEEDNAME: nikki
+          PACKAGES: nikki luci-app-nikki
+          NO_REFRESH_CHECK: true
+
+      - name: compress
+        run: |
+          tar -c -z -f nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz -C bin/packages/${{ matrix.arch }}/nikki .
+
+      - if: github.event_name == 'push' && startsWith(github.ref_name, 'v')
+        name: release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz
+
+      - name: upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: nikki_fork_${{ matrix.arch }}-${{ matrix.branch }}
+          path: bin/packages/${{ matrix.arch }}/nikki
