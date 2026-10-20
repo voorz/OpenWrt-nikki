@@ -1,0 +1,40 @@
+name: build-packages-fork
+
+# Trimmed build for this fork: only the packages carrying the fork's changes
+# (nikki, luci-app-nikki), only for the devices in use, and on the
+# openwrt-24.10 SDK so artifacts stay .ipk for opkg-based firmware.
+# Upstream's full-matrix build-packages.yml is intentionally left untouched.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.arch }}-${{ matrix.branch }} build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - aarch64_generic
+          - aarch64_cortex-a53
+        branch:
+          - openwrt-24.10
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: build
+        uses: openwrt/gh-action-sdk@main
+        env:
+          ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
+          FEEDNAME: nikki
+          PACKAGES: nikki luci-app-nikki
+          NO_REFRESH_CHECK: true
+
+      - name: upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: nikki_fork_${{ matrix.arch }}-${{ matrix.branch }}
+          path: bin/packages/${{ matrix.arch }}/nikki
