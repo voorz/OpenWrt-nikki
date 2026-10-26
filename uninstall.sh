@@ -4,6 +4,8 @@
 
 # uninstall
 if [ -x "/bin/opkg" ]; then
+	# release the hold set by install.sh so nikki can be removed
+	opkg flag user nikki >/dev/null 2>&1 || true
 	opkg list-installed luci-i18n-nikki-* | cut -d ' ' -f 1 | xargs opkg remove
 	opkg remove luci-app-nikki
 	opkg remove nikki
