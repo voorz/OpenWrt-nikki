@@ -47,14 +47,32 @@ if [ -x "/bin/opkg" ]; then
 	# install ipks
 	echo "install ipks"
 	eval "$(jsonfilter -i nikki.version -e "mihomo_meta_version=@['packages']['mihomo-meta']" -e "nikki_version=@['packages']['nikki']" -e "luci_app_nikki_version=@['packages']['luci-app-nikki']")"
-	opkg install "$feed_url/mihomo-meta_${mihomo_meta_version}_${arch}.ipk"
-	opkg install "$feed_url/nikki_${nikki_version}_${arch}.ipk"
-	opkg install "$feed_url/luci-app-nikki_${luci_app_nikki_version}_all.ipk"
+	# release any hold on nikki so it can be (re)installed
+	opkg flag user nikki >/dev/null 2>&1 || true
+	opkg install --force-downgrade "$feed_url/mihomo-meta_${mihomo_meta_version}_${arch}.ipk"
+	opkg install --force-downgrade "$feed_url/nikki_${nikki_version}_${arch}.ipk"
+	opkg install --force-downgrade "$feed_url/luci-app-nikki_${luci_app_nikki_version}_all.ipk"
 	for lang in $languages; do
 		lang_version=$(jsonfilter -i nikki.version -e "@['packages']['luci-i18n-nikki-${lang}']")
-		opkg install "$feed_url/luci-i18n-nikki-${lang}_${lang_version}_all.ipk"
+		opkg install --force-downgrade "$feed_url/luci-i18n-nikki-${lang}_${lang_version}_all.ipk"
 	done
 	
+	# verify the installed nikki is exactly this feed's version
+	echo "verify installed version"
+	if [ -z "$nikki_version" ]; then
+		echo "error: failed to read nikki version from $feed_url/index.json" >&2
+		rm -f nikki.version
+		exit 1
+	fi
+	installed_nikki_version=$(opkg list-installed nikki | cut -d ' ' -f 3)
+	if [ "$installed_nikki_version" != "$nikki_version" ]; then
+		echo "error: installed nikki version ($installed_nikki_version) does not match feed version ($nikki_version)" >&2
+		rm -f nikki.version
+		exit 1
+	fi
+	# hold nikki so a by-name install from another feed cannot replace it
+	opkg flag hold nikki
+
 	rm -f nikki.version
 elif [ -x "/usr/bin/apk" ]; then
 	# update feeds
