@@ -16,20 +16,23 @@
 wget -O - https://github.com/voorz/OpenWrt-nikki/raw/refs/heads/main/feed.sh | ash
 ```
 
-2. 安装（一条命令，LuCI 应用会自动带上核心）：
+2. 用安装脚本安装：
 
 ```shell
-opkg install luci-app-nikki luci-i18n-nikki-zh-cn
+wget -O - https://github.com/voorz/OpenWrt-nikki/raw/refs/heads/main/install.sh | ash
 ```
 
-不需要中文界面可去掉第二个包。也可以在 LuCI 的「软件包」页面中安装。
+脚本会按系统已装的语言，从本 fork 的 feed 逐个按文件下载并安装核心、LuCI 应用和语言包。按文件装，而不是按名装：某些固件自带第三方源（例如 Kwrt 的 kiddin9），其中的上游 nikki 在按名 `opkg install` 时可能压过本 fork——之前就有路由器这样装上了未修复的版本。装完后，脚本会校验已装核心的版本与 feed 一致，并把核心包 hold 锁定，使之后的按名安装或升级无法悄悄替换它。
 
 ## 更新
 
+重跑安装脚本即可：
+
 ```shell
-opkg update
-opkg install luci-app-nikki luci-i18n-nikki-zh-cn
+wget -O - https://github.com/voorz/OpenWrt-nikki/raw/refs/heads/main/install.sh | ash
 ```
+
+它会原地升级，随后重复版本校验并重新锁定。
 
 ## 卸载
 

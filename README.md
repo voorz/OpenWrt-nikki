@@ -16,20 +16,23 @@ Packages are served from this fork's own feed at [voorz-nikki.pages.dev](https:/
 wget -O - https://github.com/voorz/OpenWrt-nikki/raw/refs/heads/main/feed.sh | ash
 ```
 
-2. Install (one command — the LuCI app pulls in the core automatically):
+2. Install with the installer script:
 
 ```shell
-opkg install luci-app-nikki luci-i18n-nikki-zh-cn
+wget -O - https://github.com/voorz/OpenWrt-nikki/raw/refs/heads/main/install.sh | ash
 ```
 
-Drop the second package if you don't need the Chinese UI. Installing from LuCI's *Software* page works too.
+The script installs the core, the LuCI app and the language packs matching your system, downloading each package file directly from this fork's feed. Install by file, not by name: some firmware bundles a third-party feed (for example Kwrt's kiddin9) whose upstream nikki can outrank this fork in a by-name `opkg install` — that is how routers ended up with the unpatched build. After installing, the script verifies the core version against the feed and holds the package, so a later by-name install or upgrade cannot silently replace it.
 
 ## Update
 
+Re-run the installer:
+
 ```shell
-opkg update
-opkg install luci-app-nikki luci-i18n-nikki-zh-cn
+wget -O - https://github.com/voorz/OpenWrt-nikki/raw/refs/heads/main/install.sh | ash
 ```
+
+It upgrades the packages in place, then repeats the version check and re-applies the hold.
 
 ## Uninstall
 
